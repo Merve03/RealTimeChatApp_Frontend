@@ -10,21 +10,21 @@ const MainPage = () => {
   };
 
   return (
-    <div className="container mt-5">
+    <div className="container-fluid mt-5">
       <div className="row justify-content-center">
-        <div className="col-md-6">
-          <h2 className="text-center mb-4">Register</h2>
-
+        {/* Use a larger column size (col-lg-8 or col-lg-10) */}
+        <div className="col-lg-8 col-md-10 col-12 mx-auto">
           {/* Registration Form */}
           <Register />
 
           {/* Login button */}
           <div className="text-center mt-3">
+            Already have an account?
             <button
               className="btn btn-secondary w-100"
               onClick={handleLoginRedirect}
             >
-              Already have an account? Login
+              Login
             </button>
           </div>
         </div>
