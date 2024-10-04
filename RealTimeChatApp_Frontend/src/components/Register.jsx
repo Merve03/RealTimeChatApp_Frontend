@@ -1,7 +1,9 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useState } from "react";
 
 // Yup validation schema
 const validationSchema = Yup.object().shape({
@@ -20,7 +22,12 @@ const validationSchema = Yup.object().shape({
 });
 
 const Register = () => {
-  const handleSubmit = async (values, { resetForm }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+  const handleSubmit = async (
+    values,
+    { setSubmitting, setErrors, resetForm }
+  ) => {
     try {
       const response = await axios.post(
         "https://localhost:7210/api/account/register",
@@ -28,16 +35,39 @@ const Register = () => {
       );
       if (response.status === 200) {
         alert("Registration successful!");
-        resetForm(); // Reset form after successful submission
-      } else {
-        alert("Registration failed. Please try again.");
+        navigate("/login");
+        resetForm();
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "An unexpected error occurred";
-      alert(`An error occurred during registration: ${errorMessage}`);
+      if (error.response && error.response.status === 400) {
+        const serverErrors = error.response.data.errors; // Assumes error is returned as 'errors'
+        const formattedErrors = {}; // For mapping server errors to Formik's fields
+        serverErrors.forEach((err, index) => {
+          if (err.toLowerCase().includes("email")) {
+            formattedErrors.email = err;
+          } else if (err.toLowerCase().includes("full name")) {
+            formattedErrors.fullName = err;
+          } else if (err.toLowerCase().includes("password")) {
+            formattedErrors.password = err;
+          } else if (err.toLowerCase().includes("confirm password")) {
+            formattedErrors.confirmPassword = err;
+          }
+        });
+        setErrors(formattedErrors); // This will set errors to Formik fields
+      } else if (error.response.status === 409) {
+        // Handle 409 conflict
+        const conflictMessage =
+          error.response.data.message || "User already exists.";
+        setErrors({ email: conflictMessage });
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "An unexpected error occurred";
+        alert(`An error occurred during registration: ${errorMessage}`);
+      }
+    } finally {
+      setSubmitting(false); // Formik's method to stop the loading state
     }
   };
 
@@ -81,28 +111,41 @@ const Register = () => {
                 </div>
 
                 {/* Password Field */}
-                <div className="form-group mb-3">
+                <div className="form-group mb-3 position-relative">
                   <label>Password</label>
                   <Field
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     className="form-control"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-secondary position-absolute end-0 top-0 mt-2 me-2"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
                   <ErrorMessage
                     name="password"
                     component="div"
                     className="text-danger"
                   />
                 </div>
-
                 {/* Confirm Password Field */}
-                <div className="form-group mb-3">
+                <div className="form-group mb-3 position-relative">
                   <label>Confirm Password</label>
                   <Field
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="confirmPassword"
                     className="form-control"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-secondary position-absolute end-0 top-0 mt-2 me-2"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
                   <ErrorMessage
                     name="confirmPassword"
                     component="div"

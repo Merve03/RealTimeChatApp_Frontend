@@ -2,8 +2,8 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useState } from "react";
 
-// Yup validation schema based on LoginRequest model
 const validationSchema = Yup.object().shape({
   email: Yup.string()
     .email("Invalid email address")
@@ -14,7 +14,12 @@ const validationSchema = Yup.object().shape({
 });
 
 const Login = () => {
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = async (
+    values,
+    { setSubmitting, setErrors, resetForm }
+  ) => {
     try {
       const response = await axios.post(
         "https://localhost:7210/api/account/login",
@@ -22,21 +27,34 @@ const Login = () => {
       );
 
       if (response.status === 200) {
-        const { userId, accessToken, refreshToken } = response.data;
+        const { userId, accessToken, refreshToken } = response.data.data;
         alert(`Login successful! User ID: ${userId}`);
-        // Optionally, store access and refresh tokens in localStorage or handle session management
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        resetForm(); // Reset form upon successful login
+        resetForm();
       } else {
         alert("Login failed. Please check your credentials.");
       }
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "An unexpected error occurred";
-      alert(`An error occurred during login: ${errorMessage}`);
+        error.response?.data?.message || "An unexpected error occurred";
+      const serverErrors = error.response?.data?.errors || [];
+
+      if (error.response?.status === 401) {
+        alert("Unauthorized: Invalid email or password.");
+      } else if (error.response?.status === 400) {
+        const formattedErrors = {};
+        serverErrors.forEach((err) => {
+          if (err.toLowerCase().includes("email")) {
+            formattedErrors.email = err;
+          } else if (err.toLowerCase().includes("password")) {
+            formattedErrors.password = err;
+          }
+        });
+        setErrors(formattedErrors);
+      } else {
+        alert(`Error: ${errorMessage}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -69,13 +87,20 @@ const Login = () => {
                 </div>
 
                 {/* Password Field */}
-                <div className="form-group mb-3">
+                <div className="form-group mb-3 position-relative">
                   <label>Password</label>
                   <Field
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     className="form-control"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-secondary position-absolute end-0 top-0 mt-2 me-2"
+                    onClick={() => setShowPassword((prev) => !prev)} // toggle the show password state
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
                   <ErrorMessage
                     name="password"
                     component="div"

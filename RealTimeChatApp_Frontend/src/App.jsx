@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import MainPage from "./pages/MainPage";
+import MainPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import "bootstrap/dist/css/bootstrap.min.css";
+import RegisterPage from "./pages/RegisterPage";
 
 function App() {
   return (
@@ -9,7 +10,7 @@ function App() {
       <Router>
         <div className="w-100" style={{ maxWidth: "1200px" }}>
           <Routes>
-            <Route path="/" element={<MainPage />} />
+            <Route path="/" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Routes>
         </div>
