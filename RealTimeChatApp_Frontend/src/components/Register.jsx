@@ -5,6 +5,8 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useState } from "react";
 
+import API_BASE_URL from "../config/config";
+
 // Yup validation schema
 const validationSchema = Yup.object().shape({
   email: Yup.string()
@@ -30,7 +32,7 @@ const Register = () => {
   ) => {
     try {
       const response = await axios.post(
-        "https://localhost:7210/api/account/register",
+        `${API_BASE_URL}/account/register`,
         values
       );
       if (response.status === 200) {

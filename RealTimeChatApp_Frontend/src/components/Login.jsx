@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import API_BASE_URL from "../config/config";
 
 const validationSchema = Yup.object().shape({
   email: Yup.string()
@@ -14,15 +17,16 @@ const validationSchema = Yup.object().shape({
 });
 
 const Login = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
+  const [showPassword, setShowPassword] = useState(false);
   const handleSubmit = async (
     values,
     { setSubmitting, setErrors, resetForm }
   ) => {
     try {
       const response = await axios.post(
-        "https://localhost:7210/api/account/login",
+        `${API_BASE_URL}/account/login`,
         values
       );
 
@@ -31,7 +35,7 @@ const Login = () => {
         alert(`Login successful! User ID: ${userId}`);
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        resetForm();
+        navigate("/user");
       } else {
         alert("Login failed. Please check your credentials.");
       }
