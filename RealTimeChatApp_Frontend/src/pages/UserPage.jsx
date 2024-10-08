@@ -2,7 +2,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import { Button } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import axios from "../config/axiosConfig"; // Assuming you have a config for axios
-import API_BASE_URL from "../config/config";
+import * as signalR from "@microsoft/signalr";
 
 import AddFriendModal from "../modals/AddFriendModal";
 import NewChatModal from "../modals/NewChatModal";
@@ -10,18 +10,80 @@ import FriendList from "../components/FriendList";
 import PrivateChatList from "../components/PrivateChatList";
 import GroupList from "../components/GroupList";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const HUB_BASE_URL = import.meta.env.VITE_HUB_BASE_URL;
+
 const UserPage = () => {
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+
   const [userDetails, setUserDetails] = useState({ fullname: "", email: "" }); // State to store user details
   const [loading, setLoading] = useState(true);
+
+  const [chatHubConnection, setChatHubConnection] = useState(null);
+  const [notificationHubConnection, setNotificationHubConnection] =
+    useState(null);
 
   const handleAddFriendClick = () => setShowAddFriendModal(true);
   const handleNewChatClick = () => setShowNewChatModal(true);
   const handleCloseAddFriendModal = () => setShowAddFriendModal(false);
   const handleCloseNewChatModal = () => setShowNewChatModal(false);
 
-  // Fetch user details when the component mounts
+  // establish signalR connection when component mounts
+  useEffect(() => {
+    const startHubConnections = async () => {
+      try {
+        const chatHubConnection = new signalR.HubConnectionBuilder()
+          .withUrl(`${HUB_BASE_URL}/chat`)
+          .withAutomaticReconnect()
+          .configureLogging(signalR.LogLevel.Information)
+          .build();
+
+        await chatHubConnection.start();
+        console.log("Connected to ChatHub");
+        setChatHubConnection(chatHubConnection);
+
+        chatHubConnection.on("ReceiveMessage", (message) => {
+          console.log("Message received from ChatHub:", message);
+        });
+
+        const notificationHubConnection = new signalR.HubConnectionBuilder()
+          .withUrl(`${HUB_BASE_URL}/notification`)
+          .withAutomaticReconnect()
+          .configureLogging(signalR.LogLevel.Information)
+          .build();
+
+        await notificationHubConnection.start();
+        console.log("Connected to NotificationHub");
+        setNotificationHubConnection(notificationHubConnection);
+
+        notificationHubConnection.on("ReceiveNotification", (notification) => {
+          console.log(
+            "Notification received from NotificationHub:",
+            notification
+          );
+        });
+      } catch (error) {
+        console.error("Error connecting to SignalR hub:", error);
+      }
+    };
+
+    startHubConnections();
+
+    return () => {
+      // cleanup connections on component unmount
+      if (chatHubConnection) {
+        chatHubConnection.stop();
+        console.log("Disconnected from ChatHub");
+      }
+      if (notificationHubConnection) {
+        notificationHubConnection.stop();
+        console.log("Disconnected from NotificationHub");
+      }
+    };
+  }, []);
+
+  // fetch user details when the component mounts
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
@@ -90,15 +152,38 @@ const UserPage = () => {
           show={showAddFriendModal}
           handleClose={handleCloseAddFriendModal}
         />
-        <NewChatModal
-          show={showNewChatModal}
-          handleClose={handleCloseNewChatModal}
-        />
+        {chatHubConnection && (
+          <NewChatModal
+            show={showNewChatModal}
+            handleClose={handleCloseNewChatModal}
+            hubConnection={chatHubConnection} // pass the connection as prop
+          />
+        )}
 
         {/* Define Routes */}
         <Routes>
-          <Route path="private-chats" element={<PrivateChatList />} />
-          <Route path="friends" element={<FriendList />} />
+          <Route
+            path="private-chats"
+            element={
+              chatHubConnection ? (
+                <PrivateChatList ChatHubConnection={chatHubConnection} />
+              ) : (
+                <div>Loading Chat Hub...</div>
+              )
+            }
+          />
+          <Route
+            path="friends"
+            element={
+              notificationHubConnection ? (
+                <FriendList
+                  NotificationHubConnection={notificationHubConnection}
+                />
+              ) : (
+                <div>Loading Notification Hub...</div>
+              )
+            }
+          />
           <Route path="groups" element={<GroupList />} />
         </Routes>
       </div>

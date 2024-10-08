@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import axios from "../config/axiosConfig";
-import API_BASE_URL from "../config/config";
 import * as Yup from "yup";
 
-const NewChatModal = ({ show, handleClose }) => {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const NewChatModal = ({ show, handleClose, hubConnection }) => {
   const [friendId, setFriendId] = useState("");
   const [chatTitle, setChatTitle] = useState("");
   const [friends, setFriends] = useState([]);
@@ -60,10 +61,18 @@ const NewChatModal = ({ show, handleClose }) => {
       const response = await axios.post(
         `${API_BASE_URL}/user/new-private-chat`,
         {
-          ChatTitle: chatTitle, // Include chat title in the request
+          ChatTitle: chatTitle,
           FriendId: friendId,
         }
       );
+      if (response.status === 200) {
+        const chatId = response.data.data; // endpoint will return chatId
+
+        if (hubConnection) {
+          await hubConnection.invoke("JoinChatRoom", chatId);
+          console.log(`Joined chat room:${chatId}`);
+        }
+      }
       alert(response.data.message);
       handleClose();
     } catch (error) {

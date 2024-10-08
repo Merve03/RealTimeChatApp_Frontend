@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import axios from "../config/axiosConfig";
 import * as Yup from "yup";
-import API_BASE_URL from "../config/config";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const AddFriendModal = ({ show, handleClose }) => {
   const [email, setEmail] = useState("");

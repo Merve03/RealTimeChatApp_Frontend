@@ -10,19 +10,24 @@ import {
   Alert,
 } from "react-bootstrap";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const UserPrivateChats = () => {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const limit = 20;
 
   useEffect(() => {
     // Fetch user private chats
     const fetchChats = async () => {
       try {
         // Corrected URL structure
-        const response = await axios.get(`/user/user-private-chats/${limit}`);
-        setChats(response.data.data); // Assuming data contains the list of ChatModels
+        const response = await axios.get(
+          `${API_BASE_URL}/user/user-private-chats`
+        );
+        if (response.status === 200) {
+          setChats(response.data.data);
+        }
       } catch (err) {
         setError(err.response?.data.message || "Failed to fetch chats");
       } finally {
@@ -31,7 +36,7 @@ const UserPrivateChats = () => {
     };
 
     fetchChats();
-  }, [limit]);
+  }, []);
 
   if (loading) {
     return (

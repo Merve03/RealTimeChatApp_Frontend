@@ -5,7 +5,7 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate } from "react-router-dom";
 
-import API_BASE_URL from "../config/config";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const validationSchema = Yup.object().shape({
   email: Yup.string()
