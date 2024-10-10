@@ -10,10 +10,45 @@ const FriendList = ({ NotificationHubConnection }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [onlineStatus, setOnlineStatus] = useState({});
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     if (!NotificationHubConnection) {
       console.error("Notification hub connection is not provided.");
+      return;
+    }
+
+    const connectionStateCheck = () => {
+      if (NotificationHubConnection.connectionStarted) {
+        console.log("NotificationHubConnection is connected");
+        setConnected(true);
+      } else {
+        console.error("NotificationHubConnection not connected");
+        setConnected(false);
+      }
+    };
+
+    connectionStateCheck();
+
+    // Attach event listeners only once when the component mounts
+    NotificationHubConnection.onclose(connectionStateCheck);
+    NotificationHubConnection.onreconnected(connectionStateCheck);
+
+    // Clean up event listeners when the component unmounts or when connection is reset
+    return () => {
+      NotificationHubConnection.off("close", connectionStateCheck);
+      NotificationHubConnection.off("reconnected", connectionStateCheck);
+    };
+  }, [NotificationHubConnection]);
+
+  // Display the connection status
+  console.log(
+    "NotificationHubConnection state:",
+    NotificationHubConnection.state
+  );
+
+  useEffect(() => {
+    if (!connected) {
       return;
     }
 
@@ -29,7 +64,10 @@ const FriendList = ({ NotificationHubConnection }) => {
 
           // Convert the friend data to an array of { id, fullname } objects
           const friendsArray = Object.entries(friendData).map(
-            ([id, fullname]) => ({ id, fullname })
+            ([id, fullname]) => ({
+              id,
+              fullname,
+            })
           );
 
           setFriends(friendsArray);
@@ -43,12 +81,17 @@ const FriendList = ({ NotificationHubConnection }) => {
         setLoading(false);
       }
     };
+
+    // Handle online status
     NotificationHubConnection.on(
       "ReceiveFriendsOnlineStatus",
       (onlineStatus) => {
+        console.log("Received online status from server:", onlineStatus);
         setOnlineStatus(onlineStatus);
       }
     );
+
+    // Handle any error messages received via the NotificationHub
     NotificationHubConnection.on("ReceiveErrorMessage", (message) => {
       setError(message);
     });
@@ -56,12 +99,10 @@ const FriendList = ({ NotificationHubConnection }) => {
     fetchFriendsDetails();
 
     return () => {
-      if (NotificationHubConnection) {
-        NotificationHubConnection.off("ReceiveFriendsOnlineStatus");
-        NotificationHubConnection.off("ReceiveErrorMessage");
-      }
+      NotificationHubConnection.off("ReceiveFriendsOnlineStatus");
+      NotificationHubConnection.off("ReceiveErrorMessage");
     };
-  }, [NotificationHubConnection]);
+  }, [NotificationHubConnection, connected]);
 
   return (
     <div>
@@ -97,7 +138,7 @@ const FriendList = ({ NotificationHubConnection }) => {
 };
 
 FriendList.propTypes = {
-  NotificationHubConnection: PropTypes.object,
+  NotificationHubConnection: PropTypes.object.isRequired,
 };
 
 export default FriendList;
