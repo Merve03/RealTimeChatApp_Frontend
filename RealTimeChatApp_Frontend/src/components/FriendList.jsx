@@ -1,57 +1,36 @@
 import { useEffect, useState } from "react";
 import { ListGroup, Spinner, Alert } from "react-bootstrap";
 import axios from "../config/axiosConfig";
-import PropTypes from "prop-types";
+import signalRService from "../services/signalRService";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const FriendList = ({ NotificationHubConnection }) => {
+const FriendList = () => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [onlineStatus, setOnlineStatus] = useState({});
-  const [connected, setConnected] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
-    if (!NotificationHubConnection) {
-      console.error("Notification hub connection is not provided.");
-      return;
-    }
-
-    const connectionStateCheck = () => {
-      if (NotificationHubConnection.connectionStarted) {
-        console.log("NotificationHubConnection is connected");
-        setConnected(true);
-      } else {
-        console.error("NotificationHubConnection not connected");
-        setConnected(false);
+    const fetchUserId = async () => {
+      setError("");
+      try {
+        const response = await axios.get(`${API_BASE_URL}/user/user-id`);
+        if (response.status === 200) {
+          setCurrentUserId(response.data.data);
+        }
+      } catch (error) {
+        setError(
+          "Error fetching authenticated user ID: " +
+            (error.response?.data?.message || error.message)
+        );
       }
     };
-
-    connectionStateCheck();
-
-    // Attach event listeners only once when the component mounts
-    NotificationHubConnection.onclose(connectionStateCheck);
-    NotificationHubConnection.onreconnected(connectionStateCheck);
-
-    // Clean up event listeners when the component unmounts or when connection is reset
-    return () => {
-      NotificationHubConnection.off("close", connectionStateCheck);
-      NotificationHubConnection.off("reconnected", connectionStateCheck);
-    };
-  }, [NotificationHubConnection]);
-
-  // Display the connection status
-  console.log(
-    "NotificationHubConnection state:",
-    NotificationHubConnection.state
-  );
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
-    if (!connected) {
-      return;
-    }
-
     const fetchFriendsDetails = async () => {
       setLoading(true);
       setError(""); // Reset error state
@@ -82,27 +61,23 @@ const FriendList = ({ NotificationHubConnection }) => {
       }
     };
 
-    // Handle online status
-    NotificationHubConnection.on(
-      "ReceiveFriendsOnlineStatus",
-      (onlineStatus) => {
-        console.log("Received online status from server:", onlineStatus);
-        setOnlineStatus(onlineStatus);
-      }
-    );
+    if (signalRService) {
+      // Handle SignalR events for online status and errors
+      signalRService.onReceiveFriendsOnlineStatus((status) => {
+        setOnlineStatus((prevStatus) => ({ ...prevStatus, ...status }));
+      });
 
-    // Handle any error messages received via the NotificationHub
-    NotificationHubConnection.on("ReceiveErrorMessage", (message) => {
-      setError(message);
-    });
+      signalRService.onReceiveErrorMessage((message) => {
+        console.error("Received error message: ", message);
+        setError(message);
+      });
 
-    fetchFriendsDetails();
-
-    return () => {
-      NotificationHubConnection.off("ReceiveFriendsOnlineStatus");
-      NotificationHubConnection.off("ReceiveErrorMessage");
-    };
-  }, [NotificationHubConnection, connected]);
+      fetchFriendsDetails().then(() => {
+        signalRService.getFriendsOnlineStatus();
+      });
+    }
+    return () => {};
+  }, []);
 
   return (
     <div>
@@ -117,6 +92,9 @@ const FriendList = ({ NotificationHubConnection }) => {
             friends.map((friend) => (
               <ListGroup.Item key={friend.id}>
                 {friend.fullname}{" "}
+                {friend.id === currentUserId ? (
+                  <span>(Me)</span> // Add "(Me)" for the current user's own entry
+                ) : null}
                 {onlineStatus[friend.id] !== undefined ? (
                   <span
                     style={{
@@ -135,10 +113,6 @@ const FriendList = ({ NotificationHubConnection }) => {
       )}
     </div>
   );
-};
-
-FriendList.propTypes = {
-  NotificationHubConnection: PropTypes.object.isRequired,
 };
 
 export default FriendList;

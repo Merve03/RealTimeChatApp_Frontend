@@ -1,4 +1,4 @@
-// Sidebar.js
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 
 const Sidebar = ({ userDetails, loading }) => (
@@ -29,5 +29,13 @@ const Sidebar = ({ userDetails, loading }) => (
     </div>
   </div>
 );
+
+Sidebar.propTypes = {
+  userDetails: PropTypes.shape({
+    fullname: PropTypes.string.isRequired, // Assuming fullname is required
+    email: PropTypes.string.isRequired, // Assuming email is required
+  }).isRequired,
+  loading: PropTypes.bool.isRequired, // Assuming loading is a required boolean
+};
 
 export default Sidebar;

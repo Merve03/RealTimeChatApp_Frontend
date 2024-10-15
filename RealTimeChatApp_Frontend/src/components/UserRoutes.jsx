@@ -4,26 +4,20 @@ import PrivateChatList from "../components/PrivateChatList";
 import FriendList from "../components/FriendList";
 import GroupList from "../components/GroupList";
 
-const UserRoutes = ({ chatHubConnection, notificationHubConnection }) => (
+import signalRService from "../services/signalRService";
+
+const UserRoutes = () => (
   <Routes>
     <Route
       path="private-chats"
       element={
-        chatHubConnection ? (
-          <PrivateChatList ChatHubConnection={chatHubConnection} />
-        ) : (
-          <div>Loading Chat Hub...</div>
-        )
+        signalRService ? <PrivateChatList /> : <div>Loading Chat Hub...</div>
       }
     />
     <Route
       path="friends"
       element={
-        notificationHubConnection ? (
-          <FriendList NotificationHubConnection={notificationHubConnection} />
-        ) : (
-          <div>Loading Notification Hub...</div>
-        )
+        signalRService ? <FriendList /> : <div>Loading Notification Hub...</div>
       }
     />
     <Route path="groups" element={<GroupList />} />

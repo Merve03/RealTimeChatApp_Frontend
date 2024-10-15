@@ -1,49 +1,59 @@
 // UserPage.js
 import { useState, useEffect } from "react";
 import axios from "../config/axiosConfig";
+import signalRService from "../services/signalRService";
 
 import Sidebar from "../components/Sidebar";
 import ChatHeader from "../components/ChatHeader";
 import UserRoutes from "../components/UserRoutes";
 import AddFriendModal from "../modals/AddFriendModal";
-import NewChatModal from "../modals/NewChatModal";
-import useSignalR from "../hooks/useSignalR";
+import NewGroupModel from "../modals/NewGroupModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const HUB_BASE_URL = import.meta.env.VITE_HUB_BASE_URL;
 
 const UserPage = () => {
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
-  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [userDetails, setUserDetails] = useState({ fullname: "", email: "" });
   const [loading, setLoading] = useState(true);
 
-  const { hubConnection: chatHubConnection, connected: chatHubConnected } =
-    useSignalR(`${HUB_BASE_URL}/chat`);
-  const {
-    hubConnection: notificationHubConnection,
-    connected: notificationHubConnected,
-  } = useSignalR(`${HUB_BASE_URL}/notification`);
-
   const handleAddFriendClick = () => setShowAddFriendModal(true);
-  const handleNewChatClick = () => setShowNewChatModal(true);
+  const handleNewGroupClick = () => setShowNewGroupModal(true);
   const handleCloseAddFriendModal = () => setShowAddFriendModal(false);
-  const handleCloseNewChatModal = () => setShowNewChatModal(false);
+  const handleCloseNewGroupModal = () => setShowNewGroupModal(false);
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
+    const pageSetup = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/user/user-details`);
-        const user = response.data.data;
-        setUserDetails({ fullname: user.fullname, email: user.email });
-        setLoading(false);
+        if (response.status === 200) {
+          const user = response.data.data;
+          setUserDetails({ fullname: user.fullName, email: user.email });
+          setLoading(false);
+        }
+        // initialize SignalR connections
+        const jwtToken = localStorage.getItem("accessToken");
+        signalRService.initializeConnections(jwtToken);
+        await signalRService.startConnections();
+
+        // Listen for error messages
+        signalRService.onReceiveErrorMessage((errorMessage) => {
+          console.error(`Error received: ${errorMessage}`);
+        });
       } catch (error) {
         console.error("Error fetching user details:", error);
         setLoading(false);
       }
     };
 
-    fetchUserDetails();
+    (async () => {
+      await pageSetup();
+    })();
+
+    return () => {
+      // cleanup function, for unmounting
+      signalRService.stopConnections();
+    };
   }, []);
 
   return (
@@ -53,25 +63,21 @@ const UserPage = () => {
       <div className="flex-grow-1 p-4">
         <ChatHeader
           handleAddFriendClick={handleAddFriendClick}
-          handleNewChatClick={handleNewChatClick}
+          handleNewGroupClick={handleNewGroupClick}
         />
 
         <AddFriendModal
           show={showAddFriendModal}
           handleClose={handleCloseAddFriendModal}
         />
-        {chatHubConnection && (
-          <NewChatModal
-            show={showNewChatModal}
-            handleClose={handleCloseNewChatModal}
-            hubConnection={chatHubConnection}
+        {signalRService && (
+          <NewGroupModel
+            show={showNewGroupModal}
+            handleClose={handleCloseNewGroupModal}
           />
         )}
 
-        <UserRoutes
-          chatHubConnection={chatHubConnection}
-          notificationHubConnection={notificationHubConnection}
-        />
+        <UserRoutes />
       </div>
     </div>
   );
