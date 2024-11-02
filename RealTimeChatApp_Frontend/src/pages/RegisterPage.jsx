@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"; // For navigation
-import Register from "../components/Register";
+import Register from "../components/auth/Register";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -19,10 +19,7 @@ const RegisterPage = () => {
           {/* Login button */}
           <div className="text-center mt-3">
             Already have an account?
-            <button
-              className="btn btn-secondary w-100"
-              onClick={handleLoginRedirect}
-            >
+            <button className="btn btn-secondary w-100" onClick={handleLoginRedirect}>
               Login
             </button>
           </div>

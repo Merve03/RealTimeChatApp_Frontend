@@ -4,245 +4,291 @@ const HUB_BASE_URL = import.meta.env.VITE_HUB_BASE_URL;
 
 class SignalRService {
   constructor() {
-    this.chatHubConn = null; // class properties
-    this.notificationHubConn = null;
+    // Class properties
+    this.chatHubConn = null;
+    this.groupHubConn = null;
+    this.searchHubConn = null;
     this.jwtToken = null;
-    this.messageQueue = []; // storing unsent messages
+    this.messageQueue = []; // Store unsent messages
   }
 
-  // Initialization and Connection Management
+  // === CONNECTION MANAGEMENT ===
   initializeConnections(jwtToken) {
     this.jwtToken = jwtToken;
 
     if (!this.chatHubConn) {
-      this.chatHubConn = new signalR.HubConnectionBuilder()
-        .withUrl(`${HUB_BASE_URL}/chat`, {
-          accessTokenFactory: () => this.jwtToken,
-        })
-        .configureLogging(signalR.LogLevel.Information)
-        .withAutomaticReconnect()
-        .build();
-
+      this.chatHubConn = this.createHubConnection("chat");
       this.chatHubConn.onclose(async () => {
         console.log("Chat hub disconnected. Attempting to reconnect...");
         await this.startConnections();
       });
     }
 
-    if (!this.notificationHubConn) {
-      this.notificationHubConn = new signalR.HubConnectionBuilder()
-        .withUrl(`${HUB_BASE_URL}/notification`, {
-          accessTokenFactory: () => this.jwtToken,
-        })
-        .configureLogging(signalR.LogLevel.Information)
-        .withAutomaticReconnect()
-        .build();
+    if (!this.groupHubConn) {
+      this.groupHubConn = this.createHubConnection("group");
+      this.groupHubConn.onclose(async () => {
+        console.log("Group hub disconnected. Attempting to reconnect...");
+        await this.startConnections();
+      });
+    }
 
-      this.notificationHubConn.onclose(async () => {
-        console.log(
-          "Notification hub disconnected. Attempting to reconnect..."
-        );
+    if (!this.searchHubConn) {
+      this.searchHubConn = this.createHubConnection("search");
+      this.searchHubConn.onclose(async () => {
+        console.log("Search hub disconnected. Attempting to reconnect...");
         await this.startConnections();
       });
     }
   }
 
+  createHubConnection(hubName) {
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${HUB_BASE_URL}/${hubName}`, {
+        accessTokenFactory: () => this.jwtToken,
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets, // force websocket
+      })
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    connection.onreconnecting((error) => {
+      console.log(`Connection lost. Reconnecting... Error:${error}`);
+    });
+
+    connection.onreconnected((connectionId) => {
+      console.log(`Reconnected. Connection ID: ${connectionId}`);
+    });
+
+    connection.onclose((error) => {
+      console.error(`Connection closed. Error: ${error}`);
+    });
+
+    return connection;
+  }
+
   async startConnections() {
     try {
-      if (
-        this.chatHubConn &&
-        this.chatHubConn.state === signalR.HubConnectionState.Disconnected
-      ) {
-        await this.chatHubConn.start();
-        console.log("Chat hub connected...");
-        this.processMessageQueue();
-      }
-
-      if (
-        this.notificationHubConn &&
-        this.notificationHubConn.state ===
-          signalR.HubConnectionState.Disconnected
-      ) {
-        await this.notificationHubConn.start();
-        console.log("Notification hub connected...");
-      }
+      await this.startHubConnection(this.chatHubConn, "Chat hub");
+      await this.startHubConnection(this.groupHubConn, "Group hub");
+      await this.startHubConnection(this.searchHubConn, "Search hub");
     } catch (err) {
       console.error("Connection failed:", err);
-      setTimeout(() => this.startConnections(), 5000); // Retry connection on failure
+    }
+  }
+
+  async startHubConnection(hubConnection, hubName) {
+    try {
+      if (hubConnection && hubConnection.state === signalR.HubConnectionState.Disconnected) {
+        await hubConnection.start();
+        console.log(`${hubName} connected...`);
+        //this.processMessageQueue();
+      }
+    } catch (err) {
+      console.error(`Error starting ${hubName}:`, err.message, err.stack);
     }
   }
 
   async stopConnections() {
-    if (this.chatHubConn) {
-      await this.chatHubConn.stop();
-      console.log("Chat hub stopped.");
-    }
+    await this.stopHubConnection(this.chatHubConn, "Chat hub");
+    await this.stopHubConnection(this.groupHubConn, "Group hub");
+    await this.stopHubConnection(this.searchHubConn, "Search Hub");
+    this.jwtToken = null;
+  }
 
-    if (this.notificationHubConn) {
-      await this.notificationHubConn.stop();
-      console.log("Notification hub stopped.");
+  async stopHubConnection(hubConnection, hubName) {
+    if (hubConnection) {
+      await hubConnection.stop();
+      console.log(`${hubName} stopped.`);
     }
   }
 
-  // Messaging Methods
+  // === MESSAGING METHODS ===
+
   async joinChatRoom(chatId) {
-    try {
-      await this.chatHubConn.invoke("JoinChatRoom", chatId); // calling hub method
-    } catch (error) {
-      console.error("Error joining chat room:", error);
-    }
+    await this.invokeHubMethod(this.chatHubConn, "JoinChatRoom", chatId);
   }
 
   async leaveChatRoom(chatId) {
-    try {
-      await this.chatHubConn.invoke("LeaveChatRoom", chatId);
-    } catch (error) {
-      console.error("Error leaving chat room:", error);
-    }
+    await this.invokeHubMethod(this.chatHubConn, "LeaveChatRoom", chatId);
+  }
+
+  async joinGroupChatRoom(chatId) {
+    await this.invokeHubMethod(this.groupHubConn, "JoinChatRoom", chatId);
+  }
+
+  async leaveGroupChatRoom(chatId) {
+    await this.invokeHubMethod(this.groupHubConn, "LeaveChatRoom", chatId);
   }
 
   async sendMessage(chatId, message) {
     if (this.chatHubConn.state === signalR.HubConnectionState.Connected) {
-      try {
-        await this.chatHubConn.invoke("SendMessage", chatId, message);
-      } catch (error) {
-        console.error("Error sending message:", error);
-      }
+      await this.invokeHubMethod(this.chatHubConn, "SendMessage", chatId, message);
     } else {
-      this.messageQueue.push({ chatId, message });
-      console.log("Message queued due to disconnected state");
+      this.queueMessage(chatId, message);
     }
+  }
+
+  async sendGroupMessage(chatId, message) {
+    if (this.groupHubConn.state === signalR.HubConnectionState.Connected) {
+      await this.invokeHubMethod(this.groupHubConn, "SendGroupMessage", chatId, message);
+    } else {
+      this.queueMessage(chatId, message);
+    }
+  }
+
+  async broadcastMessage(message) {
+    await this.invokeHubMethod(this.chatHubConn, "BroadcastMessage", message);
+  }
+
+  queueMessage(chatId, message) {
+    this.messageQueue.push({ chatId, message, retries: 0 });
+    console.log("Message queued due to disconnected state");
   }
 
   async processMessageQueue() {
     while (this.messageQueue.length > 0) {
-      const { chatId, message } = this.messageQueue.shift(); // get the oldest message
-      try {
-        await this.chatHubConn.invoke("SendMessage", chatId, message);
-        console.log("Queued message sent.");
-      } catch (err) {
-        console.error("Error sending queued message: ", err);
-        this.messageQueue.unshift({ chatId, message }); // put it back to the queue
-        break;
+      const { chatId, message, retries } = this.messageQueue.shift(); // Get the oldest message
+      const maxRetries = 5;
+      if (retries < maxRetries) {
+        try {
+          await this.sendMessage(chatId, message);
+          console.log("Queued message sent.");
+        } catch (err) {
+          console.error("Error sending queued message: ", err);
+          this.messageQueue.unshift({ chatId, message, retries: retries + 1 }); // Requeue the message
+          break;
+        }
+      } else {
+        console.error("Max retries reached while queuing message: ", message);
       }
     }
   }
 
   async fetchPreviousMessages(chatId) {
-    try {
-      await this.chatHubConn.invoke("GetChatMessages", chatId);
-    } catch (err) {
-      console.error("Error fetching previous messages:", err);
-      throw new Error("Failed to fetch previous messages.");
-    }
+    await this.invokeHubMethod(this.chatHubConn, "GetChatMessages", chatId);
   }
 
-  // Event Handlers
-  async onReceiveMessage(callback) {
-    this.chatHubConn.on("ReceiveMessage", (messageDetails) => {
-      callback(messageDetails);
-    });
-  }
-  async offReceiveMessage() {
-    this.chatHubConn.off("ReceiveMessage");
-  }
-
-  async onReceivePreviousMessages(callback) {
-    this.chatHubConn.on("ReceivePreviousMessages", (messages) => {
-      callback(messages);
-    });
-  }
-  async offReceivePreviousMessage() {
-    this.chatHubConn.off("ReceivePreviousMessage");
-  }
-
-  async onReceiveErrorMessage(callback) {
-    this.chatHubConn.on("ReceiveErrorMessage", (errorMessage) => {
-      callback(errorMessage);
-    });
-  }
-  async offReceiveErrorMessage() {
-    this.chatHubConn.off("ReceiveErrorMessage");
-  }
-
-  async getFriendsOnlineStatus() {
-    try {
-      await this.notificationHubConn.invoke("GetFriendsOnlineStatus");
-    } catch (err) {
-      console.error("Error invoking GetFriendsOnlineStatus:", err);
-    }
+  async fetchPreviousGroupMessages(chatId) {
+    await this.invokeHubMethod(this.groupHubConn, "GetGroupChatMessages", chatId);
   }
 
   async sendTypingNotification(chatId) {
-    try {
-      await this.notificationHubConn.invoke("SendTypingNotification", chatId);
-    } catch (err) {
-      console.error("Error invoking SendTypingNotification:", err);
-    }
+    await this.invokeHubMethod(this.chatHubConn, "SendTypingNotification", chatId);
+  }
+  async sendGroupTypingNotification(chatId) {
+    await this.invokeHubMethod(this.groupHubConn, "SendGroupTypingNotification", chatId);
   }
 
-  async markPrivateAsRead(messageId, recipientId) {
-    try {
-      await this.notificationHubConn.invoke(
-        "MarkPrivateAsRead",
-        messageId,
-        recipientId
-      );
-    } catch (err) {
-      console.error("Error invoking MarkPrivateAsRead:", err);
-    }
+  // === EVENT HANDLERS ===
+  async onReceiveMessage(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceiveMessage", callback);
   }
 
-  async markGroupAsRead(messageId, userId) {
-    try {
-      await this.notificationHubConn.invoke(
-        "MarkGroupAsRead",
-        messageId,
-        userId
-      );
-    } catch (err) {
-      console.error("Error invoking MarkGroupAsRead:", err);
-    }
+  async offReceiveMessage(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceiveMessage", callback);
   }
 
-  // Notification Event Handlers
-  async onReceiveFriendsOnlineStatus(callback) {
-    this.notificationHubConn.on(
-      "ReceiveFriendsOnlineStatus",
-      (onlineStatus) => {
-        callback(onlineStatus);
-      }
-    );
+  async onReceivePreviousMessages(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceivePreviousMessages", callback);
+  }
+
+  async offReceivePreviousMessages(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceivePreviousMessages", callback);
+  }
+
+  async onReceiveChatErrorMessage(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceiveErrorMessage", callback);
+  }
+
+  async offReceiveChatErrorMessage(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceiveErrorMessage", callback);
+  }
+
+  async onReceiveGroupMessage(callback) {
+    this.registerHubEvent(this.groupHubConn, "ReceiveGroupMessage", callback);
+  }
+
+  async offReceiveGroupMessage(callback) {
+    this.unregisterHubEvent(this.groupHubConn, "ReceiveGroupMessage", callback);
+  }
+
+  async onReceivePreviousGroupMessages(callback) {
+    this.registerHubEvent(this.groupHubConn, "ReceivePreviousGroupMessages", callback);
+  }
+
+  async offReceivePreviousGroupMessages(callback) {
+    this.unregisterHubEvent(this.groupHubConn, "ReceivePreviousGroupMessages", callback);
+  }
+
+  async onReceiveGroupErrorMessage(callback) {
+    this.registerHubEvent(this.groupHubConn, "ReceiveGroupErrorMessage", callback);
+  }
+
+  async offReceiveGroupErrorMessage(callback) {
+    this.unregisterHubEvent(this.groupHubConn, "ReceiveGroupErrorMessage", callback);
+  }
+
+  async onReceiveBroadcast(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceiveBroadcast", callback);
+  }
+
+  async offReceiveBroadcast(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceiveBroadcast", callback);
+  }
+
+  async onReceiveOnlineStatus(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceiveOnlineStatus", callback);
+  }
+
+  async offReceiveOnlineStatus(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceiveOnlineStatus", callback);
   }
 
   async onReceiveTypingNotification(callback) {
-    this.notificationHubConn.on("ReceiveTypingNotification", (userId) => {
-      callback(userId);
-    });
+    this.registerHubEvent(this.chatHubConn, "ReceiveTypingNotification", callback);
   }
 
-  async onReceivePrivateMessageRead(callback) {
-    this.notificationHubConn.on(
-      "ReceivePrivateMessageRead",
-      (messageId, recipientId) => {
-        callback(messageId, recipientId);
-      }
-    );
+  async offReceiveTypingNotification(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceiveTypingNotification", callback);
   }
 
-  async onReceiveGroupMessageRead(callback) {
-    this.notificationHubConn.on(
-      "ReceiveGroupMessageRead",
-      (messageId, userId) => {
-        callback(messageId, userId);
-      }
-    );
+  async onReceiveGroupTypingNotification(callback) {
+    this.registerHubEvent(this.groupHubConn, "ReceiveGroupTypingNotification", callback);
   }
 
-  async onReceiveNotificationErrorMessage(callback) {
-    this.notificationHubConn.on("ReceiveErrorMessage", (errorMessage) => {
-      callback(errorMessage);
-    });
+  async offReceiveGroupTypingNotification(callback) {
+    this.unregisterHubEvent(this.groupHubConn, "ReceiveGroupTypingNotification", callback);
+  }
+
+  // === SEARCHING METHODS
+
+  async searchFriend(fullname) {
+    await this.invokeHubMethod(this.searchHubConn, "SearchForFriend", fullname);
+  }
+
+  async OnReceiveSearchResults(callback) {
+    this.registerHubEvent(this.searchHubConn, "ReceiveSearchResults", callback);
+  }
+
+  async OffReceiveSearchResults(callback) {
+    this.unregisterHubEvent(this.searchHubConn, "ReceiveSearchResults", callback);
+  }
+
+  // === HELPER METHODS ===
+  async invokeHubMethod(hubConnection, methodName, ...args) {
+    try {
+      await hubConnection.invoke(methodName, ...args);
+    } catch (err) {
+      console.error(`Error invoking ${methodName}:`, err.message, err.stack);
+    }
+  }
+
+  registerHubEvent(hubConnection, eventName, callback) {
+    hubConnection.on(eventName, callback);
+  }
+
+  unregisterHubEvent(hubConnection, eventName, callback) {
+    hubConnection.off(eventName, callback);
   }
 }
 
