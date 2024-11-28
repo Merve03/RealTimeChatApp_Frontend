@@ -22,7 +22,10 @@ const Sidebar = ({ userDetails, loading }) => (
           <Link to="/user/friends">Friend List</Link>
         </li>
         <li>
-          <Link to="/user/groups">Group List</Link>
+          <Link to="/user/groups">Groups</Link>
+        </li>
+        <li>
+          <Link to="/user/announcements">Announcements</Link>
         </li>
       </ul>
     </div>

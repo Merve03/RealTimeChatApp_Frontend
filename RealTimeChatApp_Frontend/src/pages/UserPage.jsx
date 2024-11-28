@@ -100,6 +100,7 @@ const UserPage = () => {
             <p>Unable to connect to the chat service. Retrying...</p>
           </Alert>
         )}
+
         <UserRoutes />
       </div>
     </div>

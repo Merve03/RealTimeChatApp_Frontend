@@ -172,6 +172,10 @@ class SignalRService {
     await this.invokeHubMethod(this.groupHubConn, "GetGroupChatMessages", chatId);
   }
 
+  async fetchPreviousBroadcasts() {
+    await this.invokeHubMethod(this.chatHubConn, "GetPreviousBroadcasts");
+  }
+
   async sendTypingNotification(chatId) {
     await this.invokeHubMethod(this.chatHubConn, "SendTypingNotification", chatId);
   }
@@ -234,6 +238,14 @@ class SignalRService {
 
   async offReceiveBroadcast(callback) {
     this.unregisterHubEvent(this.chatHubConn, "ReceiveBroadcast", callback);
+  }
+
+  async onReceivePreviousBroadcasts(callback) {
+    this.registerHubEvent(this.chatHubConn, "ReceivePreviousBroadcasts", callback);
+  }
+
+  async offReceivePreviousBroadcasts(callback) {
+    this.unregisterHubEvent(this.chatHubConn, "ReceivePreviousBroadcasts", callback);
   }
 
   async onReceiveOnlineStatus(callback) {
