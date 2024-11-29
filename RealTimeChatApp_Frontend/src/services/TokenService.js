@@ -1,12 +1,21 @@
-export const TokenService = {
-  getLocalAccessToken: () => sessionStorage.getItem("accessToken"),
-  getLocalRefreshToken: () => sessionStorage.getItem("refreshToken"),
-  setTokens: (accessToken, refreshToken) => {
-    sessionStorage.setItem("accessToken", accessToken);
-    sessionStorage.setItem("refreshToken", refreshToken);
-  },
-  removeTokens: () => {
-    sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("refreshToken");
-  },
-};
+class TokenService {
+  static getLocalAccessToken() {
+    return localStorage.getItem("accessToken");
+  }
+
+  static getLocalRefreshToken() {
+    return localStorage.getItem("refreshToken");
+  }
+
+  static setTokens(accessToken, refreshToken) {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+  }
+
+  static removeTokens() {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  }
+}
+
+export { TokenService };

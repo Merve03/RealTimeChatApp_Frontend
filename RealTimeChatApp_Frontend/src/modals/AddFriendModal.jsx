@@ -17,7 +17,7 @@ const AddFriendModal = ({ show, handleClose }) => {
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (searchText.trim().length > 3) {
+      if (searchText.trim().length > 2) {
         setLoading(true);
         setError("");
         signalRService.searchFriend(searchText);

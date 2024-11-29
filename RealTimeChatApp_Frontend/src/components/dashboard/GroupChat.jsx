@@ -166,7 +166,7 @@ const GroupChat = ({ group }) => {
         <Col>
           <strong>{groupName}</strong>
         </Col>
-        <Button variant="secondary" className="mt-3" onClick={toggleSidebar}>
+        <Button variant="primary" className="mt-3 mb-3" onClick={toggleSidebar}>
           Show Members
         </Button>
         <Col>
@@ -179,7 +179,7 @@ const GroupChat = ({ group }) => {
           <Alert variant="info">No messages yet</Alert>
         ) : (
           messages.map((msg) => (
-            <Row key={msg.chatId} className="my-2" style={{ display: "flex" }}>
+            <Row key={msg.id} className="my-2 msg-row" style={{ display: "flex" }}>
               <Col className={`chat-message ${msg.senderId === currentUserId ? "user-message" : "recipient-message"}`}>
                 <strong>{msg.senderFullname}: </strong>
                 {msg.content}

@@ -56,7 +56,6 @@ const PrivateChatList = () => {
       {error && <Alert variant="danger">{error}</Alert>}
       {!error && !loading && (
         <>
-          <h2>Your Private Chats</h2>
           {!selectedChat ? (
             chats.length === 0 ? (
               <Alert variant="info">No private chats available</Alert>
@@ -87,7 +86,7 @@ const PrivateChatList = () => {
             <>
               <Button
                 variant="secondary"
-                className="mt-3"
+                className="mt-3 mb-3"
                 onClick={() => {
                   handleLeaveChat(selectedChat.chatId);
                   setSelectedChat(null);

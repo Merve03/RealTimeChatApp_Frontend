@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
 import moment from "moment";
-import { Container, Row, Col, Spinner, Alert, Form, Button } from "react-bootstrap";
+import { Container, Row, Col, Spinner, Alert, Form, Button, Image } from "react-bootstrap";
 import useAuth from "../../hooks/useAuth";
 import signalRService from "../../services/signalRService";
+import { propTypes } from "react-bootstrap/esm/Image";
 
 const PrivateChat = ({ chat }) => {
   const [messages, setMessages] = useState([]);
@@ -17,7 +18,7 @@ const PrivateChat = ({ chat }) => {
   const typingTimeout = useRef(null);
   const { currentUserId, authError } = useAuth();
 
-  const { chatId, recipientFullname } = chat;
+  const { chatId, recipientFullname, recipientPictureUrl } = chat;
 
   useEffect(() => {
     const initializeChat = async () => {
@@ -118,58 +119,57 @@ const PrivateChat = ({ chat }) => {
     <Container>
       <Row className="mb-3">
         <Col>
-          <strong>Chat with: {recipientFullname}</strong>
+          {chat.recipientPictureUrl && <Image src={chat.recipientPictureUrl} roundedCircle style={{ width: "40px", height: "40px", marginRight: "10px" }} />}
+          {chat.recipientFullname}
         </Col>
       </Row>
       {authError && <Alert variant="danger">{authError}</Alert>}
-      <div className="chat-messages mb-3">
-        {messages.length === 0 ? (
-          <Alert variant="info">No messages yet</Alert>
-        ) : (
-          messages.map((msg) => (
-            <Row key={msg.chatId} className="my-2" style={{ display: "flex" }}>
-              <Col className={`chat-message ${msg.senderId === currentUserId ? "user-message" : "recipient-message"}`}>
-                <strong>{msg.senderFullname}: </strong>
-                {msg.content}
-                <div>
-                  <small className="text-muted">Sent At: {moment(msg.sentAt).format("YYYY/MM/DD HH:mm:ss")}</small>
-                </div>
-                <div>
-                  <small className="text-muted">Status: {msg.readStatus ? "Read" : "Unread"}</small>
-                </div>
-              </Col>
-            </Row>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <Form onSubmit={handleSendMessage}>
-        <Form.Group controlId="newMessage">
-          {isTyping ? (
-            <Row>
-              <Col>
-                <small className="text-muted">{recipientFullname} is typing...</small>
-              </Col>
-            </Row>
-          ) : (
-            <Form.Label>Send a message</Form.Label>
-          )}
 
-          <Form.Control
-            type="text"
-            placeholder="Type your message..."
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
-            maxLength={1000}
-          />
-        </Form.Group>
-        <Button type="submit" variant="primary" className="mt-2">
-          Send
-        </Button>
-      </Form>
+      <div className="chat-container border rounded shadow p-3 mb-4">
+        <div className="chat-messages mb-3">
+          {messages.length === 0 ? (
+            <Alert variant="info">No messages yet</Alert>
+          ) : (
+            messages.map((msg) => (
+              <Row key={msg.id} className={`my-2 ${msg.senderId === currentUserId ? "justify-content-end" : "justify-content-start"}`}>
+                <Col xs="auto" className={`message-box p-2 ${msg.senderId === currentUserId ? "bg-primary text-white" : "bg-light text-dark"}`}>
+                  <strong>{msg.senderFullname}</strong>
+                  <div>{msg.content}</div>
+                  <small className="text-muted">{moment(msg.sentAt).format("YYYY/MM/DD HH:mm:ss")}</small>
+                </Col>
+              </Row>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        <Form onSubmit={handleSendMessage}>
+          <Form.Group controlId="newMessage">
+            {isTyping ? (
+              <Row>
+                <Col>
+                  <small className="text-muted">{recipientFullname} is typing...</small>
+                </Col>
+              </Row>
+            ) : (
+              <Form.Label>Send a message</Form.Label>
+            )}
+
+            <Form.Control
+              type="text"
+              placeholder="Type your message..."
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTyping();
+              }}
+              maxLength={1000}
+            />
+          </Form.Group>
+          <Button type="submit" variant="primary" className="mt-2">
+            Send
+          </Button>
+        </Form>
+      </div>
     </Container>
   );
 };
@@ -178,6 +178,7 @@ PrivateChat.propTypes = {
   chat: PropTypes.shape({
     chatId: PropTypes.string.isRequired,
     recipientFullname: PropTypes.string,
+    recipientPictureUrl: propTypes.string,
   }).isRequired,
 };
 

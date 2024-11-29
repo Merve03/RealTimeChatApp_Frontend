@@ -2,33 +2,39 @@ import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 
 const Sidebar = ({ userDetails, loading }) => (
-  <div style={{ width: "200px", backgroundColor: "#f0f0f0", padding: "2%" }}>
-    <div style={{ padding: "10px" }}>
+  <div className="bg-light p-3" style={{ width: "200px", height: "100vh" }}>
+    <div className="mb-4">
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-muted">Loading...</p>
       ) : (
         <div>
-          <p>
-            <strong>{userDetails.fullname}</strong>
-          </p>
-          <p>{userDetails.email}</p>
+          <p className="fw-bold">{userDetails.fullname}</p>
+          <p className="text-muted">{userDetails.email}</p>
         </div>
       )}
-      <ul style={{ listStyleType: "none", padding: 0 }}>
-        <li>
-          <Link to="/user/private-chats">Private Chats</Link>
-        </li>
-        <li>
-          <Link to="/user/friends">Friend List</Link>
-        </li>
-        <li>
-          <Link to="/user/groups">Groups</Link>
-        </li>
-        <li>
-          <Link to="/user/announcements">Announcements</Link>
-        </li>
-      </ul>
     </div>
+    <ul className="list-group">
+      <li className="list-group-item">
+        <Link to="/user/private-chats" className="text-decoration-none">
+          Private Chats
+        </Link>
+      </li>
+      <li className="list-group-item">
+        <Link to="/user/friends" className="text-decoration-none">
+          Friend List
+        </Link>
+      </li>
+      <li className="list-group-item">
+        <Link to="/user/groups" className="text-decoration-none">
+          Groups
+        </Link>
+      </li>
+      <li className="list-group-item">
+        <Link to="/user/announcements" className="text-decoration-none">
+          Announcements
+        </Link>
+      </li>
+    </ul>
   </div>
 );
 
