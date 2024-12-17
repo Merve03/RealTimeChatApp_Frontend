@@ -1,0 +1,50 @@
+.form-container {
+    display: flex;
+    justify-content: center;    /* Yatayda ortalama */
+    align-items: center;        /* Dikeyde ortalama */
+    height: 100vh;              /* Tüm sayfa yüksekliği kadar alan kapla */
+    background-color: #9bc3ea;  /* Opsiyonel: arka plan rengi */
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  /* Form için çerçeve stili */
+  .form-wrapper {
+    width: 100%;
+    max-width: 400px;           /* Formun maksimum genişliği */
+    padding: 20px;
+    background-color: #fff;     /* Beyaz arka plan */
+    border: 1px solid #ccc;     /* İnce gri çerçeve */
+    border-radius: 8px;         /* Köşeleri yuvarlama */
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1); /* Hafif gölge efekti */
+  }
+  .form-control {
+    border: 2px solid #007bff; /* Mavi kenarlık */
+    background-color: #fff;    /* Beyaz arka plan */
+    padding: 10px;             /* İç boşluk */
+    border-radius: 5px;        /* Kenar yuvarlama */
+    width: 100%;               /* Tam genişlik */
+    box-sizing: border-box;    /* Padding ve border genişliği hesaba katılsın */
+  }
+  
+  /* Odaklanıldığında kenarlığın rengini değiştirme */
+  .form-control:focus {
+    outline: none;             /* Tarayıcı varsayılan outline'ını kaldır */
+    border-color: #0056b3;     /* Daha koyu mavi kenarlık */
+    box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5); /* Hafif mavi gölge */
+  }
+  .btn-custom {
+    background-color: #007bff;  /* Mavi arka plan */
+    color: #fff;               /* Beyaz yazı */
+    padding: 10px 20px;        /* İç boşluk */
+    border: none;              /* Kenarlık yok */
+    border-radius: 5px;        /* Kenar yuvarlama */
+    font-size: 16px;           /* Yazı boyutu */
+    cursor: pointer;           /* İmleç el simgesi */
+    transition: background-color 0.3s;  /* Arka plan geçiş efekti */
+  }
+  
+  /* Hover efekti */
+  .btn-custom:hover {
+    background-color: #0056b3;  /* Daha koyu mavi */
+  }
