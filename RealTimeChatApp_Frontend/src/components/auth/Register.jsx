@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
+import  "../auth/register.css";
 import { useState } from "react";
 import eyeIcon from "../../assets/eye.svg";
 import closedEyeIcon from "../../assets/eye-off.svg";
